@@ -1,0 +1,8 @@
+go-kokoro
+Copyright 2026 Drew Bednar and contributors
+
+Original project code is licensed under Apache-2.0 (LICENSE).
+The embedded vocabulary is from hexgrad/Kokoro-82M config.json (Apache-2.0).
+Phoneme packing and voice selection adapt thewh1teagle/kokoro-onnx (MIT).
+Audio trimming adapts librosa's mono trimming algorithm (ISC).
+Original notices are retained in third_party/licenses/; see THIRD_PARTY.md.

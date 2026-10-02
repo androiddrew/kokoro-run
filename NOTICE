@@ -1,0 +1,6 @@
+kokoro-run
+Copyright 2026 Drew Bednar and contributors
+
+Original project code is licensed under Apache-2.0 (LICENSE).
+Uses Cobra (Apache-2.0), pflag (BSD-3-Clause) and the androiddrew Go TTS libraries.
+Library, model and native-runtime licenses remain applicable; see THIRD_PARTY.md.

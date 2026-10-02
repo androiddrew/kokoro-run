@@ -1,0 +1,14 @@
+/bin/
+/dist/
+/artifacts/
+/.assets/
+/go.work
+/go.work.sum
+/go.local.mod
+/go.local.sum
+/coverage.out
+/assets/
+*.onnx
+*.bin
+*.wav
+*.f32

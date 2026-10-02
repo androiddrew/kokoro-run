@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ORT_VERSION: 1.22.0
+  ORT_SHA256: 8344d55f93d5bc5021ce342db50f62079daf39aaafb5d311a451846228be49b3
+
+jobs:
+  test:
+    name: Test (Go ${{ matrix.go }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ["1.25.x", "stable"] # declared minimum and latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Install ONNX Runtime and eSpeak-ng
+        run: |
+          curl -fsSL -o ort.tgz "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-${ORT_VERSION}.tgz"
+          echo "${ORT_SHA256}  ort.tgz" | sha256sum -c -
+          tar -xzf ort.tgz -C "$RUNNER_TEMP"
+          ort="$RUNNER_TEMP/onnxruntime-linux-x64-${ORT_VERSION}/lib/libonnxruntime.so.${ORT_VERSION}"
+          echo "KOKORO_TEST_ORT=$ort" >> "$GITHUB_ENV"
+          echo "KOKORO_RUN_ORT_LIBRARY=$ort" >> "$GITHUB_ENV"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends espeak-ng
+      - name: Cache Kokoro model and voices
+        id: cache
+        uses: actions/cache@v6
+        with:
+          path: ~/kokoro-assets
+          key: kokoro-${{ hashFiles('internal/assets/manifest.json') }}
+      - name: Download Kokoro model and voices
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          jq -r '.files[] | "\(.url) \(.path)"' internal/assets/manifest.json |
+            while read -r url path; do
+              mkdir -p "$(dirname ~/kokoro-assets/"$path")"
+              curl -fsSL -o ~/kokoro-assets/"$path" "$url"
+            done
+      - name: Verify Kokoro files
+        run: |
+          jq -r '.files[] | "\(.sha256)  \(.path)"' internal/assets/manifest.json > "$RUNNER_TEMP/SHA256SUMS"
+          (cd ~/kokoro-assets && sha256sum -c "$RUNNER_TEMP/SHA256SUMS")
+          echo "KOKORO_TEST_ASSETS=$HOME/kokoro-assets/kokoro" >> "$GITHUB_ENV"
+          echo "KOKORO_RUN_ASSETS=$HOME/kokoro-assets" >> "$GITHUB_ENV"
+      - run: go vet ./...
+      - run: go test -race ./...
+      - name: CLI smoke test (CPU, both fallbacks)
+        run: |
+          go build -o bin/kokoro-run ./cmd/kokoro-run
+          for fallback in neural espeak; do
+            bin/kokoro-run doctor --provider cpu --fallback "$fallback" > "$RUNNER_TEMP/doctor-$fallback.json"
+            jq -e .verified "$RUNNER_TEMP/doctor-$fallback.json"
+            bin/kokoro-run synth --provider cpu --fallback "$fallback" \
+              --text 'Hello, outofdictionary world!' --output "$RUNNER_TEMP/$fallback.wav"
+          done
+
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...

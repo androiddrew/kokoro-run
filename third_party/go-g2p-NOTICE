@@ -1,0 +1,15 @@
+go-g2p
+Copyright 2026 Drew Bednar and contributors
+
+Original project code is licensed under Apache-2.0 (LICENSE).
+English frontend and fallback conversion behavior adapt hexgrad/Misaki
+(Apache-2.0). Tokenizer/POS behavior adapts spaCy and Thinc (MIT).
+MurmurHash algorithms are public domain, authored by Austin Appleby.
+Embedded data and models:
+- data/*_gold.json, data/*_silver.json: hexgrad/Misaki dictionaries (Apache-2.0), unchanged.
+- data/tokenizer.json, models/pos.*: derived from spaCy en_core_web_sm 3.8.0 (MIT),
+  converted to JSON and ONNX.
+- fallback/neural/models/*: PeterReid/graphemes_to_phonemes_en_us and _en_gb
+  (Apache-2.0), modified: split into encoder/decoder and converted to ONNX.
+  See fallback/neural/models/README.md.
+Third-party code/data retain their notices; see THIRD_PARTY.md.

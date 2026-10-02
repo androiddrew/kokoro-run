@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  # The binary needs CGO, so each architecture builds natively on its own runner.
+  # Debian 12 keeps the binaries compatible with glibc 2.34 and newer; the image
+  # tracks the latest Go patch release.
+  BUILD_IMAGE: golang:1.27-bookworm
+  ORT_VERSION: 1.22.0
+
+jobs:
+  build:
+    name: Build linux/${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            ort_package: x64
+            ort_sha256: 8344d55f93d5bc5021ce342db50f62079daf39aaafb5d311a451846228be49b3
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            ort_package: aarch64
+            ort_sha256: bb76395092d150b52c7092dc6b8f2fe4d80f0f3bf0416d2f269193e347e24702
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src -e VERSION="$GITHUB_REF_NAME" \
+            -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" "$BUILD_IMAGE" sh -euc '
+              git config --global --add safe.directory /src
+              go version
+              go test ./...
+              CGO_ENABLED=1 go build -trimpath \
+                -ldflags "-s -w -X github.com/androiddrew/kokoro-run/internal/cli.version=$VERSION" \
+                -o dist/kokoro-run ./cmd/kokoro-run
+              chown -R "$HOST_UID:$HOST_GID" dist'
+      - name: Smoke test the binary
+        env:
+          ORT_PACKAGE: onnxruntime-linux-${{ matrix.ort_package }}-${{ env.ORT_VERSION }}
+          ORT_SHA256: ${{ matrix.ort_sha256 }}
+        run: |
+          curl -fsSL -o ort.tgz "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/${ORT_PACKAGE}.tgz"
+          echo "${ORT_SHA256}  ort.tgz" | sha256sum -c -
+          tar -xzf ort.tgz -C "$RUNNER_TEMP"
+          test "$(dist/kokoro-run --version)" = "kokoro-run version $GITHUB_REF_NAME"
+          dist/kokoro-run phonemize --text 'Hello, world!' \
+            --ort "$RUNNER_TEMP/$ORT_PACKAGE/lib/libonnxruntime.so.${ORT_VERSION}"
+      - name: Package
+        run: |
+          name="kokoro-run_${GITHUB_REF_NAME}_linux_${{ matrix.arch }}"
+          mkdir -p "dist/$name"
+          cp dist/kokoro-run LICENSE NOTICE README.md ASSETS.md THIRD_PARTY.md "dist/$name/"
+          cp -r third_party "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: kokoro-run-linux-${{ matrix.arch }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: kokoro-run-linux-*
+          path: dist
+          merge-multiple: true
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist
+          sha256sum kokoro-run_*.tar.gz > SHA256SUMS
+          cat SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --generate-notes --title "kokoro-run $GITHUB_REF_NAME" \
+            kokoro-run_*.tar.gz SHA256SUMS
