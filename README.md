@@ -6,18 +6,20 @@ It is a single Go binary: no Python or other interpreter is needed at run time.
 
 ## Install
 
-**Release binary (Linux/amd64).** Download `kokoro-run_<version>_linux_amd64.tar.gz`
+**Release binary (Linux amd64 or arm64).** Download `kokoro-run_<version>_linux_<arch>.tar.gz`
 from [GitHub Releases](https://github.com/androiddrew/kokoro-run/releases) and
 check it against the release's `SHA256SUMS`:
 
 ```bash
 sha256sum -c --ignore-missing SHA256SUMS
-tar -xzf kokoro-run_v0.1.0_linux_amd64.tar.gz
+tar -xzf kokoro-run_v0.1.0_linux_amd64.tar.gz   # or _linux_arm64
 ```
 
 The archive holds the `kokoro-run` binary plus LICENSE, NOTICE, THIRD_PARTY.md and
 `third_party/`. It needs glibc 2.34 or newer (Ubuntu 22.04, Debian 12, RHEL 9 or
 later); ONNX Runtime and the Kokoro model files are installed separately (below).
+On arm64, use ONNX Runtime's `linux-aarch64` package, which is CPU-only; CUDA on
+arm64 (e.g. Jetson) needs an ONNX Runtime build with CUDA from another source.
 
 **From source.** Go **1.25** or newer, CGO and a C compiler are required:
 
@@ -122,9 +124,9 @@ Combined runtime-lifetime tests in `integration/` use `KOKORO_TEST_ASSETS` and
 
 CI (`.github/workflows/ci.yml`) runs these tests with ONNX Runtime 1.22.0 and the
 Kokoro files, plus `doctor` and `synth` with both fallbacks on CPU. Pushing a `v*`
-tag runs `.github/workflows/release.yml`, which builds the binary in
-`golang:1.27-bookworm`, smoke-tests it, and publishes the archive and
-`SHA256SUMS` as a GitHub release.
+tag runs `.github/workflows/release.yml`, which builds amd64 and arm64 binaries
+natively in `golang:1.27-bookworm`, smoke-tests each one, and publishes the
+archives and `SHA256SUMS` as a GitHub release.
 
 ## Known limits
 
