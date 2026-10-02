@@ -49,6 +49,12 @@ if [[ $ort == */* && ! -f $ort ]]; then
     printf 'ORT library not found: %s\nSet KOKORO_RUN_ORT_LIBRARY or follow ASSETS.md.\n' "$ort" >&2
     exit 1
 fi
+for file in "$bundle/kokoro/kokoro-v1.0.onnx" "$archive"; do
+    if [[ ! -f $file ]]; then
+        printf 'Kokoro file not found: %s\nSet KOKORO_RUN_ASSETS to the directory containing kokoro/; see ASSETS.md.\n' "$file" >&2
+        exit 1
+    fi
+done
 if [[ ! $text =~ [^[:space:]] ]]; then
     printf 'Sample text must not be empty.\n' >&2
     exit 2
