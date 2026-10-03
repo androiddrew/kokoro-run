@@ -12,18 +12,10 @@ import (
 
 	g2p "github.com/androiddrew/go-g2p"
 	kokoro "github.com/androiddrew/go-kokoro"
-	"github.com/androiddrew/ortenv"
 	"github.com/spf13/cobra"
-	ort "github.com/yalue/onnxruntime_go"
-)
 
-type initialization struct {
-	kokoro.Initialization
-	FrontendSeconds  float64 `json:"frontend_initialization_seconds"`
-	SynthesisSeconds float64 `json:"synthesis_initialization_seconds"`
-	TotalSeconds     float64 `json:"initialization_seconds"`
-	RuntimeVersion   string  `json:"runtime_version"`
-}
+	"github.com/androiddrew/kokoro-run/internal/engine"
+)
 
 type audioStats struct {
 	SampleRate       int     `json:"sample_rate"`
@@ -42,68 +34,10 @@ type measurement struct {
 	GenerationSeconds float64        `json:"generation_seconds"`
 	RTF               float64        `json:"rtf"`
 	Audio             audioStats     `json:"audio"`
+	PreparedText      string         `json:"prepared_text,omitempty"`
 	Frontend          g2p.Result     `json:"frontend"`
 	Output            string         `json:"output"`
 	Inputs            []kokoro.Chunk `json:"inputs"`
-}
-
-type pipeline struct {
-	frontend  *frontend
-	synthesis *kokoro.Engine
-	lease     *ortenv.Lease
-}
-
-func load(c config) (_ *pipeline, init initialization, err error) {
-	return loadPipeline(c, false)
-}
-
-func loadPipeline(c config, controlled bool) (_ *pipeline, init initialization, err error) {
-	total := time.Now()
-	defer func() { init.TotalSeconds = time.Since(total).Seconds() }()
-	p := &pipeline{}
-	defer func() {
-		if err != nil {
-			err = errors.Join(err, p.close())
-		}
-	}()
-	start := time.Now()
-	p.lease, err = ortenv.Acquire(c.Frontend.ORTLibrary)
-	runtimeSeconds := time.Since(start).Seconds()
-	if err != nil {
-		return nil, init, err
-	}
-	init.RuntimeVersion = ort.GetVersion()
-	if !controlled {
-		start = time.Now()
-		p.frontend, err = newFrontend(c)
-		init.FrontendSeconds = time.Since(start).Seconds()
-		if err != nil {
-			return nil, init, err
-		}
-	}
-	start = time.Now()
-	p.synthesis, err = kokoro.New(c.Synthesis)
-	init.SynthesisSeconds = time.Since(start).Seconds()
-	if err == nil {
-		_, err = p.synthesis.Prepare("həlˈO", c.Voice, c.Speed)
-	}
-	if err != nil {
-		return nil, init, err
-	}
-	init.Initialization = p.synthesis.Initialization()
-	init.RuntimeSeconds += runtimeSeconds
-	return p, init, nil
-}
-
-func (p *pipeline) close() error {
-	var err error
-	if p.synthesis != nil {
-		err = p.synthesis.Close()
-	}
-	if p.frontend != nil {
-		err = errors.Join(err, p.frontend.close())
-	}
-	return errors.Join(err, p.lease.Close())
 }
 
 func statistics(result kokoro.Result) (audioStats, error) {
@@ -124,14 +58,15 @@ func statistics(result kokoro.Result) (audioStats, error) {
 	return s, nil
 }
 
-func (p *pipeline) generate(cmd *cobra.Command, c config, text, output string) (m measurement, err error) {
-	return p.generateInput(cmd, c, text, output, nil)
+func generate(p *engine.Pipeline, cmd *cobra.Command, c config, text, output string) (m measurement, err error) {
+	return generateInput(p, cmd, c, text, output, nil)
 }
 
-func (p *pipeline) generateInput(cmd *cobra.Command, c config, text, output string, prepared []kokoro.Chunk) (m measurement, err error) {
+func generateInput(p *engine.Pipeline, cmd *cobra.Command, c config, text, output string, prepared []kokoro.Chunk) (m measurement, err error) {
 	start := time.Now()
 	if prepared == nil {
-		m.Frontend, err = p.frontend.Phonemize(cmd.Context(), g2p.Request{Text: text, Dialect: g2p.Dialect(c.Language)})
+		m.PreparedText = c.prepare(text)
+		m.Frontend, err = p.Frontend.Phonemize(cmd.Context(), g2p.Request{Text: m.PreparedText, Dialect: g2p.Dialect(c.Language)})
 		m.FrontendSeconds = time.Since(start).Seconds()
 		if dErr := diagnostics(cmd.ErrOrStderr(), m.Frontend); err != nil || dErr != nil {
 			return m, errors.Join(err, dErr)
@@ -140,9 +75,9 @@ func (p *pipeline) generateInput(cmd *cobra.Command, c config, text, output stri
 	inferenceStart := time.Now()
 	var result kokoro.Result
 	if prepared == nil {
-		result, err = p.synthesis.Synthesize(cmd.Context(), kokoro.Request{Phonemes: m.Frontend.Phonemes, Voice: c.Voice, Speed: c.Speed, Trim: c.Trim})
+		result, err = p.Synthesis.Synthesize(cmd.Context(), kokoro.Request{Phonemes: m.Frontend.Phonemes, Voice: c.Voice, Speed: c.Speed, Trim: c.Trim})
 	} else {
-		result, err = p.synthesis.SynthesizePrepared(cmd.Context(), prepared, c.Trim)
+		result, err = p.Synthesis.SynthesizePrepared(cmd.Context(), prepared, c.Trim)
 	}
 	m.SynthesisSeconds = time.Since(inferenceStart).Seconds()
 	m.Timings = result.Timings
@@ -178,15 +113,16 @@ func synthCommand() *cobra.Command {
 	var input inputFlags
 	var output, report string
 	cmd := &cobra.Command{Use: "synth", Short: "Synthesize text to a new 24 kHz mono PCM16 WAV", Args: cobra.NoArgs}
-	frontendFlags(cmd, &c)
-	synthesisFlags(cmd, &c)
-	languageFlag(cmd, &c)
+	frontendFlags(cmd)
+	synthesisFlags(cmd)
+	languageFlag(cmd)
+	textPrepFlags(cmd)
 	textFlags(cmd, &input)
 	cmd.Flags().StringVarP(&output, "output", "o", "", "New WAV path (required; existing files are preserved)")
 	cmd.Flags().StringVar(&report, "report", "", "Optional new JSON diagnostics/timing report path")
 	_ = cmd.MarkFlagRequired("output")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) (err error) {
-		if err = c.validate(true); err != nil {
+		if c, err = resolve(cmd, true); err != nil {
 			return err
 		}
 		if output == "" || output == "-" {
@@ -199,22 +135,22 @@ func synthCommand() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		p, init, err := load(c)
+		p, init, err := engine.Load(c.options(false), c.Voice, c.Speed)
 		if err != nil {
 			return err
 		}
-		defer func() { err = errors.Join(err, p.close()) }()
-		m, err := p.generate(cmd, c, text, output)
+		defer func() { err = errors.Join(err, p.Close()) }()
+		m, err := generate(p, cmd, c, text, output)
 		if err != nil {
 			return err
 		}
 		if report != "" {
 			err = writeNew(report, func(w io.Writer) error {
 				return encode(w, struct {
-					Build          map[string]string `json:"build"`
-					Config         config            `json:"config"`
-					Initialization initialization    `json:"initialization"`
-					Measurement    measurement       `json:"measurement"`
+					Build          map[string]string     `json:"build"`
+					Config         config                `json:"config"`
+					Initialization engine.Initialization `json:"initialization"`
+					Measurement    measurement           `json:"measurement"`
 				}{buildMetadata(), c, init, m})
 			})
 			if err != nil {
@@ -234,9 +170,10 @@ func benchCommand() *cobra.Command {
 	var warmup, repeat int
 	cmd := &cobra.Command{Use: "bench", Short: "Measure repeated text or controlled-tensor generation (JSONL)", Args: cobra.NoArgs,
 		Long: "Measure first, warm-up and warm requests using one loaded pipeline.\nUse --controlled for shared precomputed tensors instead of text.\nIncludes completed output retrieval and WAV close. Downloads are never timed."}
-	frontendFlags(cmd, &c)
-	synthesisFlags(cmd, &c)
-	languageFlag(cmd, &c)
+	frontendFlags(cmd)
+	synthesisFlags(cmd)
+	languageFlag(cmd)
+	textPrepFlags(cmd)
 	textFlags(cmd, &input)
 	cmd.Flags().StringVarP(&output, "output", "o", "", "New directory for WAVs and measurements.jsonl (required)")
 	cmd.Flags().StringVar(&controlled, "controlled", "", "JSON array of precomputed Kokoro chunks; bypass frontend")
@@ -246,7 +183,7 @@ func benchCommand() *cobra.Command {
 	cmd.Flags().IntVar(&repeat, "repeat", 30, "Measured warm requests (0 with --warmup 0 records only first)")
 	_ = cmd.MarkFlagRequired("output")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) (err error) {
-		if err = c.validate(true); err != nil {
+		if c, err = resolve(cmd, true); err != nil {
 			return err
 		}
 		if warmup < 0 || warmup > 10000 || repeat < 0 || repeat > 10000 || (repeat == 0 && warmup != 0) {
@@ -275,11 +212,11 @@ func benchCommand() *cobra.Command {
 		if err = os.Mkdir(output, 0755); err != nil {
 			return err
 		}
-		p, init, err := loadPipeline(c, controlled != "")
+		p, init, err := engine.Load(c.options(controlled != ""), c.Voice, c.Speed)
 		if err != nil {
 			return err
 		}
-		defer func() { err = errors.Join(err, p.close()) }()
+		defer func() { err = errors.Join(err, p.Close()) }()
 		f, err := os.OpenFile(filepath.Join(output, "measurements.jsonl"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
 		if err != nil {
 			return err
@@ -299,7 +236,7 @@ func benchCommand() *cobra.Command {
 			} else if i <= warmup {
 				phase = "warmup"
 			}
-			m, e := p.generateInput(cmd, c, text, filepath.Join(output, fmt.Sprintf("%04d-%s.wav", i, phase)), prepared)
+			m, e := generateInput(p, cmd, c, text, filepath.Join(output, fmt.Sprintf("%04d-%s.wav", i, phase)), prepared)
 			if e != nil {
 				return e
 			}

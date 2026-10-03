@@ -1,0 +1,106 @@
+# syntax=docker/dockerfile:1
+#
+# The CPU image, for linux/amd64 and linux/arm64. Build it with `make image-cpu`.
+#
+#   BAKE_MODELS  1 bakes the Kokoro model and voices (about 354 MB), pulled
+#                with the manifest's SHA-256 checks; 0 gives a slim image whose
+#                assets volume needs `kokoro-run pull` once
+#   WITH_ESPEAK  1 installs Debian's espeak-ng (GPL-3.0-or-later) for
+#                `fallback: espeak`; the default fallback is neural either way
+#   WITH_FFMPEG  1 installs ffmpeg for the opus, aac and flac formats
+#   VERSION      stamped into the binary
+
+ARG ORT_VERSION=1.22.0
+ARG GO_IMAGE=golang:1.27-bookworm
+
+FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS src
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY . .
+
+# The cgo binary, cross-compiled for the target with Debian's cross toolchain.
+FROM src AS build
+ARG TARGETARCH
+RUN set -eux; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends "crossbuild-essential-$TARGETARCH"; \
+	rm -rf /var/lib/apt/lists/*
+ARG VERSION=devel
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+	set -eux; \
+	case "$TARGETARCH" in \
+		amd64) cc=x86_64-linux-gnu-gcc ;; \
+		arm64) cc=aarch64-linux-gnu-gcc ;; \
+		*) echo "unsupported TARGETARCH $TARGETARCH" >&2; exit 1 ;; \
+	esac; \
+	CGO_ENABLED=1 GOOS=linux GOARCH="$TARGETARCH" CC="$cc" \
+		go build -trimpath -ldflags "-s -w -X github.com/androiddrew/kokoro-run/internal/cli.version=$VERSION" \
+		-o /out/kokoro-run ./cmd/kokoro-run
+
+# The baked assets, pulled with the manifest's checks. They don't depend on
+# the target, so this stage runs on the build platform.
+FROM src AS models
+ARG BAKE_MODELS=1
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+	go build -o /usr/local/bin/kokoro-run ./cmd/kokoro-run
+RUN set -eux; \
+	mkdir /assets; \
+	if [ "$BAKE_MODELS" = 1 ]; then kokoro-run pull --dir /assets; fi
+
+FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS onnxruntime
+ARG TARGETARCH
+ARG ORT_VERSION
+ARG ORT_SHA256_amd64=8344d55f93d5bc5021ce342db50f62079daf39aaafb5d311a451846228be49b3
+ARG ORT_SHA256_arm64=bb76395092d150b52c7092dc6b8f2fe4d80f0f3bf0416d2f269193e347e24702
+RUN set -eux; \
+	case "$TARGETARCH" in \
+		amd64) arch=x64; sum="$ORT_SHA256_amd64" ;; \
+		arm64) arch=aarch64; sum="$ORT_SHA256_arm64" ;; \
+		*) echo "unsupported TARGETARCH $TARGETARCH" >&2; exit 1 ;; \
+	esac; \
+	curl -fsSL -o /ort.tgz "https://github.com/microsoft/onnxruntime/releases/download/v$ORT_VERSION/onnxruntime-linux-$arch-$ORT_VERSION.tgz"; \
+	echo "$sum  /ort.tgz" | sha256sum -c -; \
+	mkdir /onnxruntime; \
+	tar xzf /ort.tgz --no-same-owner --strip-components=1 -C /onnxruntime
+
+FROM debian:bookworm-slim
+ARG ORT_VERSION
+ARG VERSION=devel
+ARG WITH_ESPEAK=0
+ARG WITH_FFMPEG=1
+LABEL org.opencontainers.image.title="kokoro-run" \
+	org.opencontainers.image.description="OpenAI-compatible text-to-speech with Kokoro v1.0, on the CPU" \
+	org.opencontainers.image.source="https://github.com/androiddrew/kokoro-run" \
+	org.opencontainers.image.version="$VERSION" \
+	org.opencontainers.image.licenses="Apache-2.0"
+RUN set -eux; \
+	packages=ca-certificates; \
+	if [ "$WITH_FFMPEG" = 1 ]; then packages="$packages ffmpeg"; fi; \
+	if [ "$WITH_ESPEAK" = 1 ]; then packages="$packages espeak-ng"; fi; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends $packages; \
+	rm -rf /var/lib/apt/lists/*; \
+	useradd --uid 10001 --user-group --home-dir /var/lib/kokoro-run --no-create-home --shell /usr/sbin/nologin kokoro-run
+
+# Licenses. Debian's packages keep theirs in /usr/share/doc/<package>/copyright.
+ARG DOCS=/usr/share/doc/kokoro-run
+COPY LICENSE NOTICE THIRD_PARTY.md ASSETS.md $DOCS/
+COPY third_party/ $DOCS/third_party/
+COPY --from=onnxruntime /onnxruntime/LICENSE /onnxruntime/ThirdPartyNotices.txt $DOCS/onnxruntime/
+
+COPY --from=onnxruntime /onnxruntime/lib/libonnxruntime.so.$ORT_VERSION /opt/onnxruntime/lib/
+COPY docker/config.yaml /etc/kokoro-run/config.yaml
+COPY --from=build /out/kokoro-run /usr/local/bin/kokoro-run
+# A named volume mounted here starts as a copy of the baked assets.
+COPY --from=models --chown=kokoro-run:kokoro-run /assets /var/lib/kokoro-run/assets
+
+# Every command reads the image's config; KOKORO_RUN_* variables override it.
+ENV KOKORO_RUN_CONFIG=/etc/kokoro-run/config.yaml
+USER kokoro-run
+WORKDIR /var/lib/kokoro-run
+EXPOSE 8880
+VOLUME /var/lib/kokoro-run/assets
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s CMD ["kokoro-run", "_healthcheck"]
+ENTRYPOINT ["kokoro-run"]
+CMD ["serve"]

@@ -20,6 +20,8 @@ import (
 	kokoro "github.com/androiddrew/go-kokoro"
 	"github.com/spf13/cobra"
 	ort "github.com/yalue/onnxruntime_go"
+
+	"github.com/androiddrew/kokoro-run/internal/engine"
 )
 
 type assetIdentity struct {
@@ -69,12 +71,12 @@ func doctorCommand() *cobra.Command {
 	var c config
 	var logPath string
 	cmd := &cobra.Command{Use: "doctor", Short: "Verify assets, both dialects, synthesis and actual provider placement", Args: cobra.NoArgs}
-	frontendFlags(cmd, &c)
-	synthesisFlags(cmd, &c)
-	languageFlag(cmd, &c)
+	frontendFlags(cmd)
+	synthesisFlags(cmd)
+	languageFlag(cmd)
 	cmd.Flags().StringVar(&logPath, "log", "", "Save native placement log to a new file (optional)")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) (err error) {
-		if err = c.validate(true); err != nil {
+		if c, err = resolve(cmd, true); err != nil {
 			return err
 		}
 		report := doctorReport{Build: buildMetadata(), Config: c, LogPath: logPath, RuntimeLibrary: c.Frontend.ORTLibrary}
@@ -193,11 +195,11 @@ func doctorWorkerCommand() *cobra.Command {
 		defer func() { err = errors.Join(err, synthesis.Close()) }()
 		report.RuntimeVersion = ort.GetVersion()
 		report.Model = synthesis.ModelInfo()
-		frontend, err := newFrontend(c)
+		frontend, err := engine.NewFrontend(c.options(false))
 		if err != nil {
 			return err
 		}
-		defer func() { err = errors.Join(err, frontend.close()) }()
+		defer func() { err = errors.Join(err, frontend.Close()) }()
 		report.Frontend = map[g2p.Dialect]g2p.Result{}
 		for _, dialect := range []g2p.Dialect{g2p.US, g2p.GB} {
 			result, e := frontend.Phonemize(cmd.Context(), g2p.Request{Text: "Now outofdictionary words are handled by espeak.", Dialect: dialect})
