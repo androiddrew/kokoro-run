@@ -11,7 +11,7 @@ func TestDockerConfigs(t *testing.T) {
 	for _, v := range DefaultVoices() {
 		voices = append(voices, v)
 	}
-	for file, provider := range map[string]string{"../../docker/config.yaml": "cpu", "../../docker/config.cuda.yaml": "cuda"} {
+	for file, provider := range map[string]string{"../../docker/config.yaml": "cpu", "../../docker/config.cuda.yaml": "cuda", "../../docker/jetson-orin/config.yaml": "cuda"} {
 		l, err := Load(file, func(string) string { return "" }, nil)
 		if err != nil {
 			t.Fatal(err)

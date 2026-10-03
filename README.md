@@ -229,9 +229,29 @@ with its environment variable, for example `-e KOKORO_RUN_SERVER_REPLICAS=2
 `/etc/kokoro-run/config.yaml`. A new named volume at `/var/lib/kokoro-run/assets`
 starts as a copy of the baked model; a bind mount must be writable by uid 10001
 for `pull`. Without a GPU (no `--gpus all`), the CUDA image exits with "no NVIDIA
-driver is visible" rather than falling back to the CPU. Other commands run in the image too:
+GPU device is visible" rather than falling back to the CPU. Other commands run in the image too:
 `docker run --rm kokoro-run:cuda doctor --provider cuda`. Licenses are under
 `/usr/share/doc/kokoro-run/`.
+
+### Jetson Orin (JetPack 7.2)
+
+Microsoft publishes no aarch64 CUDA build of ONNX Runtime, so the Orin image
+uses a base image that compiles ONNX Runtime 1.23.0 for the Orin's GPU (sm_87)
+against JetPack 7.2's CUDA 13.2 and cuDNN 9. Build both on the Orin; the base
+takes about 4 hours and is built once:
+
+```bash
+make image-jetson-orin-onnxruntime JETSON_PARALLEL=3   # onnxruntime-jetson-orin:1.23.0-cuda13.2
+make image-jetson-orin                                  # kokoro-run:jetson-orin, minutes
+docker run --rm --runtime nvidia kokoro-run:jetson-orin doctor --provider cuda
+docker run --runtime nvidia -p 8880:8880 kokoro-run:jetson-orin
+```
+
+Each compile job can use 5-10 GB of memory: keep `JETSON_PARALLEL=3` with swap on
+a 16 GB Orin, and raise it on a 64 GB AGX Orin. The files are in
+[`docker/jetson-orin/`](docker/jetson-orin/); the recipe follows
+[straga/jetson-jp7-onnxruntime](https://github.com/straga/jetson-jp7-onnxruntime).
+Older JetPack releases (such as JetPack 5 on Xavier) aren't supported by this image.
 
 ## Development
 

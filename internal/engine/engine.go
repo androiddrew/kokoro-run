@@ -146,10 +146,11 @@ func Load(o Options, warmVoice string, warmSpeed float32) (_ *Pipeline, init Ini
 	return p, init, nil
 }
 
-// nvidiaDriver is the NVIDIA driver's control device. It exists on Linux when
-// the driver is loaded, and in a container only when it is given a GPU (the
+// nvidiaDrivers are the NVIDIA GPU devices: the discrete driver's control
+// device, and Jetson's integrated GPU memory device. One exists on Linux when
+// the driver is loaded, and in a container only when it is given the GPU (the
 // host's /proc/driver/nvidia shows through either way, so it can't be used).
-var nvidiaDriver = "/dev/nvidiactl"
+var nvidiaDrivers = []string{"/dev/nvidiactl", "/dev/nvmap"}
 
 // cudaDriverPresent fails for the CUDA provider on Linux without the NVIDIA
 // driver. ONNX Runtime 1.22 crashes the process, rather than returning an
@@ -158,10 +159,12 @@ func cudaDriverPresent(provider kokoro.Provider) error {
 	if provider != kokoro.CUDA || runtime.GOOS != "linux" {
 		return nil
 	}
-	if _, err := os.Stat(nvidiaDriver); err != nil {
-		return fmt.Errorf("provider cuda: no NVIDIA driver is visible (%w); install it, or run the container with --gpus all", err)
+	for _, device := range nvidiaDrivers {
+		if _, err := os.Stat(device); err == nil {
+			return nil
+		}
 	}
-	return nil
+	return fmt.Errorf("provider cuda: no NVIDIA GPU device is visible (%s); install the driver, or run the container with --gpus all (--runtime nvidia on Jetson)", strings.Join(nvidiaDrivers, ", "))
 }
 
 // Close releases the model, the frontend and then the runtime lease.

@@ -11,7 +11,7 @@ HOST_ARCH := $(if $(filter aarch64 arm64,$(shell uname -m)),arm64,amd64)
 BUILD_ARGS = --build-arg VERSION=$(VERSION) --build-arg BAKE_MODELS=$(BAKE_MODELS) \
 	--build-arg WITH_ESPEAK=$(WITH_ESPEAK) --build-arg WITH_FFMPEG=$(WITH_FFMPEG)
 
-.PHONY: build test test-native vet image-cpu image-cuda
+.PHONY: build test test-native vet image-cpu image-cuda image-jetson-orin-onnxruntime image-jetson-orin
 
 build:
 	CGO_ENABLED=1 go build -ldflags "-X github.com/androiddrew/kokoro-run/internal/cli.version=$(VERSION)" \
@@ -40,3 +40,18 @@ image-cpu:
 
 image-cuda:
 	docker buildx build --platform linux/amd64 -f docker/Dockerfile.cuda $(BUILD_ARGS) --load -t $(IMAGE):cuda .
+
+# Jetson Orin on JetPack 7.2, built on the Orin. The ONNX Runtime base takes
+# hours and is built once; JETSON_PARALLEL compile jobs need 5-10 GB each.
+JETSON_ORT_VERSION ?= 1.23.0
+JETSON_PARALLEL ?= 3
+JETSON_ORIN_ORT_IMAGE ?= onnxruntime-jetson-orin:$(JETSON_ORT_VERSION)-cuda13.2
+
+image-jetson-orin-onnxruntime:
+	docker buildx build --platform linux/arm64 -f docker/jetson-orin/Dockerfile.onnxruntime \
+		--build-arg ORT_VERSION=$(JETSON_ORT_VERSION) --build-arg PARALLEL=$(JETSON_PARALLEL) \
+		--load -t $(JETSON_ORIN_ORT_IMAGE) docker/jetson-orin
+
+image-jetson-orin:
+	docker buildx build --platform linux/arm64 -f docker/jetson-orin/Dockerfile $(BUILD_ARGS) \
+		--build-arg ORT_IMAGE=$(JETSON_ORIN_ORT_IMAGE) --load -t $(IMAGE):jetson-orin .
