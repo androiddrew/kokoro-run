@@ -79,8 +79,13 @@ The images in `docker/` add these to the binary, with their terms under
 - **ONNX Runtime 1.22.0** (MIT), with its `LICENSE` and `ThirdPartyNotices.txt`
   under `onnxruntime/`. The CUDA image uses the CUDA 12 build and its CUDA
   provider libraries.
-- **The Kokoro v1.0 model and voices**, unless built with `BAKE_MODELS=0`; see
-  the model card terms above and ASSETS.md (copied into the image).
+- **The Kokoro v1.0 model and voices**, unless built with `BAKE_MODELS=0`. The
+  Kokoro-82M model card (`third_party/kokoro-82M-MODEL_CARD.md`, from
+  hexgrad/Kokoro-82M at commit `f3ff3571791e39611d31c381e3a41a3af07b4987`) carries
+  its Apache-2.0 license, the CC BY 3.0 (Koniwa `tnc`) and CC BY 4.0 (SIWIS)
+  training-data attributions and its acknowledgements. Every image has it under
+  `third_party/`, and images that bake the model also have it beside the model as
+  `/var/lib/kokoro-run/assets/kokoro/MODEL_CARD.md`.
 - **ffmpeg** (Debian's or Ubuntu's package, built with `--enable-gpl`), unless
   built with `WITH_FFMPEG=0`. It runs as a separate process for the `opus`, `aac`
   and `flac` formats and is never linked.

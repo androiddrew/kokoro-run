@@ -29,7 +29,10 @@ FROM build AS models
 ARG BAKE_MODELS=1
 RUN set -eux; \
 	mkdir /assets; \
-	if [ "$BAKE_MODELS" = 1 ]; then /out/kokoro-run pull --dir /assets; fi
+	if [ "$BAKE_MODELS" = 1 ]; then \
+		/out/kokoro-run pull --dir /assets; \
+		cp /src/third_party/kokoro-82M-MODEL_CARD.md /assets/kokoro/MODEL_CARD.md; \
+	fi
 
 FROM ${GO_IMAGE} AS onnxruntime
 ARG ORT_VERSION
@@ -59,6 +62,8 @@ RUN set -eux; \
 	rm -rf /var/lib/apt/lists/*; \
 	useradd --uid 10001 --user-group --home-dir /var/lib/kokoro-run --no-create-home --shell /usr/sbin/nologin kokoro-run
 
+# third_party/ includes the Kokoro-82M model card, whose license and training
+# data attributions go with every copy of the model.
 ARG DOCS=/usr/share/doc/kokoro-run
 COPY LICENSE NOTICE THIRD_PARTY.md ASSETS.md $DOCS/
 COPY third_party/ $DOCS/third_party/

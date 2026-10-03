@@ -46,7 +46,10 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 	go build -o /usr/local/bin/kokoro-run ./cmd/kokoro-run
 RUN set -eux; \
 	mkdir /assets; \
-	if [ "$BAKE_MODELS" = 1 ]; then kokoro-run pull --dir /assets; fi
+	if [ "$BAKE_MODELS" = 1 ]; then \
+		kokoro-run pull --dir /assets; \
+		cp /src/third_party/kokoro-82M-MODEL_CARD.md /assets/kokoro/MODEL_CARD.md; \
+	fi
 
 FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS onnxruntime
 ARG TARGETARCH
@@ -84,6 +87,8 @@ RUN set -eux; \
 	useradd --uid 10001 --user-group --home-dir /var/lib/kokoro-run --no-create-home --shell /usr/sbin/nologin kokoro-run
 
 # Licenses. Debian's packages keep theirs in /usr/share/doc/<package>/copyright.
+# third_party/ includes the Kokoro-82M model card, whose license and training
+# data attributions go with every copy of the model.
 ARG DOCS=/usr/share/doc/kokoro-run
 COPY LICENSE NOTICE THIRD_PARTY.md ASSETS.md $DOCS/
 COPY third_party/ $DOCS/third_party/

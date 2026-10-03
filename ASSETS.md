@@ -35,4 +35,5 @@ Ubuntu eSpeak-ng `1.51+dfsg-12build1`). The default `--fallback neural` has no
 eSpeak dependency.
 
 Keep the Kokoro model card and licenses with any redistributed copies; see
-go-kokoro's ASSETS.md and THIRD_PARTY.md.
+go-kokoro's ASSETS.md and THIRD_PARTY.md. A copy of the model card is in
+[`third_party/kokoro-82M-MODEL_CARD.md`](third_party/kokoro-82M-MODEL_CARD.md).
