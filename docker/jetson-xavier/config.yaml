@@ -1,0 +1,33 @@
+# The Jetson Xavier image's config, at /etc/kokoro-run/config.yaml. Mount your own over it,
+# or override any setting with its KOKORO_RUN_* variable: KOKORO_RUN_ followed by
+# the setting's path in upper case, such as KOKORO_RUN_VOICE or
+# KOKORO_RUN_SERVER_REPLICAS. Set KOKORO_RUN_API_KEY to require a bearer key.
+# `docker run ... kokoro-run:jetson-xavier config` prints the effective settings.
+
+ort_library: /opt/onnxruntime/lib/libonnxruntime.so.1.22.2
+assets: /var/lib/kokoro-run/assets   # kokoro/ model and voices; mount a volume here
+provider: cuda
+device: 0                            # CUDA device ID
+threads: 1                           # the GPU does the work
+fallback: neural                     # espeak needs an image built with WITH_ESPEAK=1
+# language: us                       # us or gb; when unset, the voice's (a* us, b* gb)
+voice: af_heart                      # used by the CLI and to warm replicas
+speed: 1.0                           # the CLI's; requests give their own
+trim: true
+normalize: true                      # requests can override with "normalize"
+markdown: true                       # requests can override with "markdown"
+
+server:
+  listen: ":8880"
+  replicas: 1                        # each holds its own Kokoro session (~330 MB)
+  max_queue: 8
+  preload: true                      # without --runtime nvidia the container exits with "no NVIDIA GPU device"
+  strict_pronunciation: false        # speak unresolved words as far as known
+  chunk_gap: 120ms                   # silence between streamed sentences
+  speed: {min: 0.5, max: 2.0}
+  limits:
+    max_input_chars: 4096
+    request_timeout: 120s
+  ffmpeg: ffmpeg                     # opus, aac and flac
+  metrics: true
+  log_format: json

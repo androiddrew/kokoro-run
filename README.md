@@ -251,7 +251,30 @@ Each compile job can use 5-10 GB of memory: keep `JETSON_PARALLEL=3` with swap o
 a 16 GB Orin, and raise it on a 64 GB AGX Orin. The files are in
 [`docker/jetson-orin/`](docker/jetson-orin/); the recipe follows
 [straga/jetson-jp7-onnxruntime](https://github.com/straga/jetson-jp7-onnxruntime).
-Older JetPack releases (such as JetPack 5 on Xavier) aren't supported by this image.
+
+### Jetson Xavier (JetPack 5)
+
+JetPack 5 (L4T r35) ships CUDA 11.4, which ONNX Runtime 1.22 doesn't support. The
+Xavier image instead carries CUDA 12.2 with NVIDIA's `cuda-compat` driver, which
+runs it on the r35 kernel driver, cuDNN 9.3 (the last Tegra builds still include
+the Xavier's sm_72 kernels), and ONNX Runtime 1.22.2 compiled for sm_72, all from
+NVIDIA's checksummed redist archives. It is tested on a Xavier NX (L4T 35.6.5),
+where `doctor --provider cuda` verifies the model on the GPU and the bench corpus
+starts speaking in 0.94 s (p50) at RTF 0.26, against 4.0 s and RTF 1.15 on its six
+CPU cores. The AGX Xavier has the same GPU and should work the same way. Build
+both images on the Xavier; the base is built once (about 4 hours on the NX, then
+minutes for changes, thanks to ccache):
+
+```bash
+make image-jetson-xavier-onnxruntime XAVIER_PARALLEL=2  # onnxruntime-jetson-xavier:1.22.2-cuda12.2
+make image-jetson-xavier                                 # kokoro-run:jetson-xavier
+docker run --rm --runtime nvidia kokoro-run:jetson-xavier doctor --provider cuda
+docker run --runtime nvidia -p 8880:8880 kokoro-run:jetson-xavier
+```
+
+`docker buildx` is required; Ubuntu 20.04's `docker.io` lacks it, so install the
+`docker-buildx` package or the buildx CLI plugin. Keep `XAVIER_PARALLEL=2` with swap
+on an 8 GB Xavier NX. The files are in [`docker/jetson-xavier/`](docker/jetson-xavier/).
 
 ## Development
 

@@ -91,6 +91,12 @@ The images in `docker/` add these to the binary, with their terms under
   and `flac` formats and is never linked.
 - **eSpeak-ng** (GPL-3.0-or-later), only when built with `WITH_ESPEAK=1`, run as
   a separate process as described above.
+- **The Jetson images** carry NVIDIA's CUDA runtime libraries (cuBLAS, cuFFT,
+  cuRAND) and cuDNN 9, from NVIDIA's Jetson apt repository (Orin) or its redist
+  archives (Xavier, with the `cuda-compat` driver), under the CUDA and cuDNN
+  license agreements, whose texts are kept with the libraries. Their ONNX Runtime
+  is built from source in `docker/jetson-*/Dockerfile.onnxruntime`; its `LICENSE`
+  and `ThirdPartyNotices.txt` are in `/usr/share/doc/onnxruntime/`.
 - **The CUDA image's base**, `nvidia/cuda:12.8.1-cudnn-runtime-ubuntu24.04`, under
   NVIDIA's container license, linked at `NGC-DL-CONTAINER-LICENSE`.
 

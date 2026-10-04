@@ -11,7 +11,8 @@ HOST_ARCH := $(if $(filter aarch64 arm64,$(shell uname -m)),arm64,amd64)
 BUILD_ARGS = --build-arg VERSION=$(VERSION) --build-arg BAKE_MODELS=$(BAKE_MODELS) \
 	--build-arg WITH_ESPEAK=$(WITH_ESPEAK) --build-arg WITH_FFMPEG=$(WITH_FFMPEG)
 
-.PHONY: build test test-native vet image-cpu image-cuda image-jetson-orin-onnxruntime image-jetson-orin
+.PHONY: build test test-native vet image-cpu image-cuda image-jetson-orin-onnxruntime image-jetson-orin \
+	image-jetson-xavier-onnxruntime image-jetson-xavier
 
 build:
 	CGO_ENABLED=1 go build -ldflags "-X github.com/androiddrew/kokoro-run/internal/cli.version=$(VERSION)" \
@@ -55,3 +56,19 @@ image-jetson-orin-onnxruntime:
 image-jetson-orin:
 	docker buildx build --platform linux/arm64 -f docker/jetson-orin/Dockerfile $(BUILD_ARGS) \
 		--build-arg ORT_IMAGE=$(JETSON_ORIN_ORT_IMAGE) --load -t $(IMAGE):jetson-orin .
+
+# Jetson Xavier (NX and AGX) on JetPack 5, built on the Xavier: CUDA 12.2 through
+# cuda-compat, cuDNN 9.3 and ONNX Runtime 1.22 for sm_72. The base takes many
+# hours; XAVIER_PARALLEL compile jobs need 3-6 GB each.
+XAVIER_ORT_VERSION ?= 1.22.2
+XAVIER_PARALLEL ?= 2
+JETSON_XAVIER_ORT_IMAGE ?= onnxruntime-jetson-xavier:$(XAVIER_ORT_VERSION)-cuda12.2
+
+image-jetson-xavier-onnxruntime:
+	docker buildx build --platform linux/arm64 -f docker/jetson-xavier/Dockerfile.onnxruntime \
+		--build-arg ORT_VERSION=$(XAVIER_ORT_VERSION) --build-arg PARALLEL=$(XAVIER_PARALLEL) \
+		--load -t $(JETSON_XAVIER_ORT_IMAGE) docker/jetson-xavier
+
+image-jetson-xavier:
+	docker buildx build --platform linux/arm64 -f docker/jetson-xavier/Dockerfile $(BUILD_ARGS) \
+		--build-arg ORT_IMAGE=$(JETSON_XAVIER_ORT_IMAGE) --load -t $(IMAGE):jetson-xavier .
