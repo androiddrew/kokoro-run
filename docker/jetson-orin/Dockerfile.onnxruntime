@@ -47,14 +47,18 @@ ARG PARALLEL=3
 RUN set -eux; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends \
-		cuda-toolkit-13-2 libcudnn9-dev-cuda-13 git build-essential python3 python3-pip; \
+		cuda-toolkit-13-2 libcudnn9-dev-cuda-13 git build-essential ccache python3 python3-pip; \
 	rm -rf /var/lib/apt/lists/*; \
 	python3 -m pip install --break-system-packages --no-cache-dir packaging "cmake>=3.28"
 RUN git clone --recursive --depth 1 --branch "v$ORT_VERSION" https://github.com/microsoft/onnxruntime /onnxruntime
 WORKDIR /onnxruntime
 # --compile_no_warning_as_error: CUDA 13 deprecates longlong4, which ORT 1.23
 # still uses, and -Werror would make that fatal. --nvcc_threads 1 bounds memory.
-RUN ./build.sh --config Release --update --build --build_shared_lib --skip_tests \
+# ccache keeps compiled objects in a BuildKit cache, so a failed or changed build
+# resumes instead of starting over.
+ENV CCACHE_DIR=/root/.cache/ccache CCACHE_MAXSIZE=20G
+RUN --mount=type=cache,target=/root/.cache/ccache \
+	./build.sh --config Release --update --build --build_shared_lib --skip_tests --use_cache \
 		--parallel "$PARALLEL" --nvcc_threads 1 \
 		--use_cuda --cuda_home /usr/local/cuda-13.2 --cudnn_home /usr \
 		--cmake_extra_defines CMAKE_CUDA_ARCHITECTURES=87 onnxruntime_BUILD_UNIT_TESTS=OFF \

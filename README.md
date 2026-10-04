@@ -238,7 +238,8 @@ GPU device is visible" rather than falling back to the CPU. Other commands run i
 Microsoft publishes no aarch64 CUDA build of ONNX Runtime, so the Orin image
 uses a base image that compiles ONNX Runtime 1.23.0 for the Orin's GPU (sm_87)
 against JetPack 7.2's CUDA 13.2 and cuDNN 9. Build both on the Orin; the base
-takes about 4 hours and is built once:
+takes about 4 hours and is built once. Its compiled objects stay in a ccache in
+the BuildKit cache, so a rebuild after a failure or an update reuses them:
 
 ```bash
 make image-jetson-orin-onnxruntime JETSON_PARALLEL=3   # onnxruntime-jetson-orin:1.23.0-cuda13.2
