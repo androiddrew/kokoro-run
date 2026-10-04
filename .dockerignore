@@ -8,3 +8,4 @@ assets
 .assets
 *.onnx
 *.bin
+__pycache__
