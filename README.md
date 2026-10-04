@@ -193,7 +193,7 @@ bin/kokoro-run bench --text 'Hello, world!' --output artifacts/local-bench
 bin/kokoro-run serve --listen 127.0.0.1:8880
 bin/kokoro-run pull
 bin/kokoro-run config --config my.yaml
-./synth-all-voices.sh
+scripts/synth-all-voices.sh
 ```
 
 `synth`, `phonemize` and `bench` accept `--text`, `--file`, or stdin. The English
@@ -407,6 +407,19 @@ Kokoro files, plus `doctor` and `synth` with both fallbacks on CPU. Pushing a `v
 tag runs `.github/workflows/release.yml`, which builds amd64 and arm64 binaries
 natively in `golang:1.27-bookworm`, smoke-tests each one, and publishes the
 archives and `SHA256SUMS` as a GitHub release.
+
+### Releasing
+
+Changes are recorded in [CHANGELOG.md](CHANGELOG.md) under `## [Unreleased]` as
+they land. To release:
+
+1. Rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, add a new empty
+   `## [Unreleased]` above it, and update the compare links at the bottom.
+   `scripts/release-notes.sh vX.Y.Z` prints the section as it will be published.
+2. Merge that to `main`, then tag and push: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
+
+The release workflow publishes the version's CHANGELOG.md section as the release
+notes. It stops before building if the section is missing.
 
 ## Known limits
 

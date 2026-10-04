@@ -15,8 +15,17 @@ env:
   ORT_VERSION: 1.22.0
 
 jobs:
+  notes:
+    name: Check release notes
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: CHANGELOG.md has a section for the tag
+        run: scripts/release-notes.sh "$GITHUB_REF_NAME"
+
   build:
     name: Build linux/${{ matrix.arch }}
+    needs: notes
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
@@ -72,6 +81,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           pattern: kokoro-run-linux-*
@@ -81,9 +91,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # The tag's CHANGELOG.md section is the release notes; no section, no release.
+          scripts/release-notes.sh "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
           cd dist
           sha256sum kokoro-run_*.tar.gz > SHA256SUMS
           cat SHA256SUMS
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
-            --generate-notes --title "kokoro-run $GITHUB_REF_NAME" \
+            --notes-file "$RUNNER_TEMP/notes.md" --title "kokoro-run $GITHUB_REF_NAME" \
             kokoro-run_*.tar.gz SHA256SUMS

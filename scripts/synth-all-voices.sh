@@ -4,7 +4,7 @@ set -euo pipefail
 
 usage() {
     printf '%s\n' \
-        'Usage: ./synth-all-voices.sh [NEW_OUTPUT_DIRECTORY] [TEXT]' \
+        'Usage: scripts/synth-all-voices.sh [NEW_OUTPUT_DIRECTORY] [TEXT]' \
         '' \
         'Defaults: a new artifacts/voice-samples.XXXXXX directory; a short sample sentence.' \
         'Relative output paths are relative to your current directory.' \
@@ -12,11 +12,11 @@ usage() {
         'Environment:' \
         '  PROVIDER=cpu|cuda           Default: cpu' \
         '  FALLBACK=neural|espeak      Default: neural' \
-        '  BINARY=/path/to/binary      Default: bin/kokoro-run beside this script' \
-        '  KOKORO_RUN_ASSETS=...       Default: assets beside this script' \
+        '  BINARY=/path/to/binary      Default: bin/kokoro-run in the repository' \
+        '  KOKORO_RUN_ASSETS=...       Default: assets in the repository' \
         '  KOKORO_RUN_ORT_LIBRARY=...  Library path or loader name; default: libonnxruntime.so' \
         '' \
-        'Example: PROVIDER=cuda ./synth-all-voices.sh artifacts/all-voices "Hello, world!"'
+        'Example: PROVIDER=cuda scripts/synth-all-voices.sh artifacts/all-voices "Hello, world!"'
 }
 
 if [[ ${1:-} == --help || ${1:-} == -h ]]; then
@@ -28,7 +28,8 @@ if (( $# > 2 )); then
     exit 2
 fi
 
-root=$(dirname -- "$(realpath -- "${BASH_SOURCE[0]}")")
+# The repository root, one level above scripts/.
+root=$(dirname -- "$(dirname -- "$(realpath -- "${BASH_SOURCE[0]}")")")
 binary=${BINARY:-"$root/bin/kokoro-run"}
 provider=${PROVIDER:-cpu}
 fallback=${FALLBACK:-neural}
