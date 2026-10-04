@@ -7,6 +7,120 @@ fallback. It is a single Go binary: no Python or other interpreter is needed at 
 time. Numbers, dates, clock times, money, units, URLs and markdown are read aloud
 as words (see [Text preparation](#text-preparation)).
 
+## Getting started with Docker
+
+The quickest way to run the server is a Docker image with ONNX Runtime and the
+Kokoro model built in. The images aren't published to a registry yet, so you
+build one from a checkout first.
+
+### 1. Pick an image
+
+| Machine | Image | Build | Run with |
+|---|---|---|---|
+| Any x86-64 or arm64 Linux, CPU only | `kokoro-run:cpu` | `make image-cpu IMAGE_PLATFORMS=linux/amd64` (`linux/arm64` on ARM) | nothing extra |
+| x86-64 with an NVIDIA GPU | `kokoro-run:cuda` | `make image-cuda` | `--gpus all` |
+| Jetson Orin on JetPack 7.2 | `kokoro-run:jetson-orin` | `make image-jetson-orin-onnxruntime image-jetson-orin` | `--runtime nvidia` |
+| Jetson Xavier on JetPack 5 | `kokoro-run:jetson-xavier` | `make image-jetson-xavier-onnxruntime image-jetson-xavier` | `--runtime nvidia` |
+
+You need Docker with `docker buildx`. The CUDA image also needs the NVIDIA
+Container Toolkit; JetPack installs the NVIDIA runtime the Jetson images use.
+
+### 2. Build it
+
+```bash
+git clone https://github.com/androiddrew/kokoro-run && cd kokoro-run
+make image-cpu IMAGE_PLATFORMS=linux/amd64   # linux/arm64 on ARM, or another target above
+```
+
+The build downloads the Kokoro model and voices (about 354 MB, checked against
+their SHA-256) and bakes them into the image, so the container needs no network
+access at run time. The CPU and CUDA images take a few minutes. The Jetson images
+first compile ONNX Runtime for the Jetson's GPU, which takes about 4 hours once;
+see [Jetson Orin](#jetson-orin-jetpack-72) and [Jetson Xavier](#jetson-xavier-jetpack-5).
+
+### 3. Start the server
+
+```bash
+docker run -d --name kokoro-run -p 8880:8880 kokoro-run:cpu
+curl localhost:8880/readyz      # {"loaded":1,"replicas":1,"status":"ready"}
+```
+
+Add `--gpus all` for `kokoro-run:cuda`, or `--runtime nvidia` for the Jetson
+images. The server loads and warms the model before it listens, which takes a
+few seconds; until then `/readyz` answers 503. `docker ps` also shows the
+container as `healthy` once the first health check runs.
+
+### 4. Make some speech
+
+```bash
+curl localhost:8880/v1/audio/speech -H 'Content-Type: application/json' \
+  -d '{"model":"tts-1","voice":"alloy","input":"Your table for two is booked for 7:30 p.m. on Friday, May 5."}' \
+  -o booking.mp3
+```
+
+The API follows OpenAI's speech endpoint, so OpenAI's client libraries work by
+pointing them at the server:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8880/v1", api_key="unused")
+with client.audio.speech.with_streaming_response.create(
+    model="tts-1",
+    voice="nova",
+    input="Your table for two is booked for 7:30 p.m. on Friday, May 5.",
+) as response:
+    response.stream_to_file("booking.mp3")
+```
+
+`voice` takes a Kokoro voice such as `af_heart` or `bm_george`, or an OpenAI voice
+name (`alloy`, `nova`, `onyx` and so on) mapped to one. `curl
+localhost:8880/v1/voices` lists them, or run `docker run --rm kokoro-run:cpu voices`.
+`a*` voices speak US English and `b*` voices UK English. `response_format` can be
+`mp3` (the default), `wav` or `pcm`, plus `opus`, `aac` and `flac`. See
+[Server](#server) for every request field.
+
+### 5. Check the GPU (CUDA and Jetson images)
+
+```bash
+docker run --rm --gpus all kokoro-run:cuda doctor --provider cuda              # x86-64
+docker run --rm --runtime nvidia kokoro-run:jetson-orin doctor --provider cuda # Jetson
+```
+
+`doctor` synthesizes a test sentence and prints a JSON report. `"verified": true`
+means the model's Conv and MatMul operations actually ran on the GPU.
+
+### Common changes
+
+Settings come from the image's config file, which any `KOKORO_RUN_*` environment
+variable overrides (see [Configuration](#configuration)).
+
+| To | Add to `docker run` |
+|---|---|
+| Use another host port | `-p 8881:8880` |
+| Require an API key | `-e KOKORO_RUN_API_KEY=change-me`, then send `Authorization: Bearer change-me` |
+| Serve more requests at once | `-e KOKORO_RUN_SERVER_REPLICAS=2` (each replica uses about 330 MB more memory) |
+| Use more CPU threads per request | `-e KOKORO_RUN_THREADS=8` (the CPU image uses 4) |
+| Use your own config | `-v "$PWD/my-config.yaml:/etc/kokoro-run/config.yaml:ro"` |
+| See the effective settings | `docker run --rm kokoro-run:cpu config` |
+
+Without an API key the server accepts any request and logs a warning, so set one
+before exposing the port beyond your machine. `docker logs kokoro-run` shows one
+JSON line per request, with its time to first audio and real-time factor;
+`/metrics` serves the same numbers to Prometheus.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| The CUDA or Jetson container exits with "no NVIDIA GPU device is visible" | Run it with `--gpus all` (CUDA) or `--runtime nvidia` (Jetson) |
+| `bind: address already in use` | Another service uses port 8880; map another one, such as `-p 8881:8880` |
+| An image built with `BAKE_MODELS=0` exits with "open voices NPZ" | It has no model: run `docker run --rm -v kokoro-assets:/var/lib/kokoro-run/assets kokoro-run:cpu pull` once and start it with the same volume |
+| Requests get 429 | Every replica is busy and the queue is full; add replicas or retry |
+| Requests get 401 | An API key is set; send `Authorization: Bearer <key>` |
+
+The [Docker](#docker) section below covers build options, volumes and licenses.
+
 ## Install
 
 **Release binary (Linux amd64 or arm64).** Download `kokoro-run_<version>_linux_<arch>.tar.gz`
