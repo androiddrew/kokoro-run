@@ -1,0 +1,143 @@
+# Corpus inputs (go-ttsnorm/corpus) whose kokoro-run phonemes deliberately differ
+# from the phonemes of the golden normalize_text reading. integration/normalize_test.go
+# fails on any other difference, and on an entry here that no longer differs.
+# Prepared with markdown and normalize on, as the server does by default.
+#
+# letters:     capitals spell letters and AM/PM; Misaki reads the golden's
+#              lower-case "a" and "a m" as the article.
+# punctuation: apostrophes, quotes, parentheses and the symbols Misaki says as
+#              words (& + @) are kept; the golden drops them ("don t").
+# markdown:    markup, list markers and link targets are removed.
+
+- input: "Dr. Rivera paid $12.50 at 3:05 p.m."
+  why: letters
+- input: "10:30 AM"
+  why: letters
+- input: "Visit https://example.com or email hello@example.com."
+  why: letters
+- input: "The code (404), not found."
+  why: punctuation
+- input: "He said \"hi\", then left."
+  why: punctuation
+- input: "\"Yes\", she said."
+  why: punctuation
+- input: "Item (a), item (b)."
+  why: punctuation
+- input: "The end)."
+  why: punctuation
+- input: "Avogadro's number is about 602214076000000000000000."
+  why: punctuation
+- input: "3:30pm"
+  why: letters
+- input: "9:05 AM"
+  why: letters
+- input: "12:00pm"
+  why: letters
+- input: "Meet me at 4:30 p.m. today."
+  why: letters
+- input: "The train leaves at 7:15 a.m."
+  why: letters
+- input: "Lunch is at 12:30 PM."
+  why: letters
+- input: "The show starts at 8:00 PM."
+  why: letters
+- input: "Wake up at 6:00am."
+  why: letters
+- input: "At 11:45 pm we left."
+  why: letters
+- input: "It is 13:30 PM somehow."
+  why: letters
+- input: "Meet at 7:30a.m. sharp."
+  why: letters
+- input: "Meet at 7:30 AM."
+  why: letters
+- input: "Call (555) 123-4567 now."
+  why: punctuation
+- input: "Visit https://example.com/docs for more."
+  why: letters
+- input: "See www.example.org for details."
+  why: letters
+- input: "The repo is at https://github.com/KittenML/KittenTTS."
+  why: letters
+- input: "Email bob@example.com for help."
+  why: letters
+- input: "Contact support@my-company.io today."
+  why: letters
+- input: "Go to http://localhost:8080/v1/audio/speech now."
+  why: letters
+- input: "Tom & Jerry."
+  why: punctuation
+- input: "A + B = C."
+  why: letters
+- input: "Ping @alice about it."
+  why: punctuation
+- input: "It's 5 o'clock."
+  why: punctuation
+- input: "Don't stop."
+  why: punctuation
+- input: "\"Quoted text\" here."
+  why: punctuation
+- input: "Use [brackets] and {braces}."
+  why: punctuation
+- input: "# Heading 1"
+  why: markdown
+- input: "## Step 2: install"
+  why: markdown
+- input: "- Item 1"
+  why: markdown
+- input: "* Item 2"
+  why: markdown
+- input: "1. First step"
+  why: markdown
+- input: "2. Second step"
+  why: markdown
+- input: "**Bold 5** and *italic 6*."
+  why: markdown
+- input: "[Link 8](https://example.com)"
+  why: markdown
+- input: "Spaced 4:30 PM here."
+  why: letters
+- input: "Sure! Here are 3 tips for better sleep: go to bed by 10:30 PM, avoid screens after 9:00, and aim for 7-9 hours."
+  why: letters
+- input: "The meeting is scheduled for March 3rd, 2025 at 2:00 PM in Room 204."
+  why: letters
+- input: "At 6:45 am the 3rd train left platform 9."
+  why: letters
+- input: "Her flight is at 10:15 a.m. on Friday."
+  why: letters
+- input: "On Nov. 8, 2016 the polls closed at 8:00 p.m."
+  why: letters
+- input: "I slept from 11:00 PM to 7:00 AM."
+  why: letters
+- input: "At 3:05 p.m."
+  why: letters
+- input: "At 3:05 p.m"
+  why: letters
+- input: "At 3:05 am, sharp."
+  why: letters
+- input: "See (https://example.com)."
+  why: letters
+- input: "Visit https://example.com, then go."
+  why: letters
+- input: "Visit HTTPS://EXAMPLE.COM now."
+  why: letters
+- input: "See https://example.com?q=1&x=2#top now."
+  why: letters
+- input: "Read https://en.wikipedia.org/wiki/Foo_(bar) today."
+  why: letters
+- input: "Try www.Example.com/a_b now."
+  why: letters
+- input: "Email me at bob@example.com."
+  why: letters
+- input: "Mail a@b.co.uk now."
+  why: letters
+- input: "Mail .bob@x.com now."
+  why: letters
+- input: "Write to first.last+tag@sub-domain.example.org today."
+  why: letters
+- input: "The <a href=\"x\">link</a>."
+  why: markdown
+- input: "Go to WWW.EXAMPLE.COM now."
+  why: letters
+- input: "Email x@a.bc1 is not an address."
+  why: punctuation

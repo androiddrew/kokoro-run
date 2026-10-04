@@ -60,22 +60,38 @@ func TestHelpAndValidation(t *testing.T) {
 func TestAssetBundleDefaults(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("KOKORO_RUN_ASSETS", root)
-	cmd := NewCommand()
-	synth, _, _ := cmd.Find([]string{"synth"})
-	for flag, suffix := range map[string]string{
-		"model": "kokoro/kokoro-v1.0.onnx", "voices": "kokoro/voices-v1.0.bin",
-	} {
-		got, err := synth.Flags().GetString(flag)
-		if err != nil || got != filepath.Join(root, suffix) {
-			t.Fatalf("%s: %q %v", flag, got, err)
+	resolved := func(args ...string) config {
+		t.Helper()
+		synth, _, _ := NewCommand().Find([]string{"synth"})
+		if err := synth.ParseFlags(args); err != nil {
+			t.Fatal(err)
 		}
+		l, err := loadSettings(synth)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return fromSettings(l.Config)
 	}
-	if err := synth.ParseFlags([]string{"--model", "/custom/model.onnx"}); err != nil {
+	c := resolved()
+	if c.Synthesis.ModelPath != filepath.Join(root, "kokoro/kokoro-v1.0.onnx") || c.Synthesis.VoicesPath != filepath.Join(root, "kokoro/voices-v1.0.bin") {
+		t.Fatalf("bundle defaults: %q %q", c.Synthesis.ModelPath, c.Synthesis.VoicesPath)
+	}
+	if c = resolved("--model", "/custom/model.onnx"); c.Synthesis.ModelPath != "/custom/model.onnx" {
+		t.Fatal("explicit model flag did not override bundle default")
+	}
+
+	// A config file sits under the environment and flags.
+	file := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(file, []byte("voice: af_bella\nspeed: 1.25\nassets: /ignored\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	got, _ := synth.Flags().GetString("model")
-	if got != "/custom/model.onnx" {
-		t.Fatal("explicit model flag did not override bundle default")
+	c = resolved("--config", file, "--speed", "0.75")
+	if c.Voice != "af_bella" || c.Speed != 0.75 || c.Synthesis.ModelPath != filepath.Join(root, "kokoro/kokoro-v1.0.onnx") {
+		t.Fatalf("layering: voice %q speed %v model %q", c.Voice, c.Speed, c.Synthesis.ModelPath)
+	}
+	t.Setenv("KOKORO_RUN_CONFIG", file)
+	if c = resolved(); c.Voice != "af_bella" {
+		t.Fatalf("KOKORO_RUN_CONFIG not read: voice %q", c.Voice)
 	}
 }
 

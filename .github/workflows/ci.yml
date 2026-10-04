@@ -67,6 +67,32 @@ jobs:
             bin/kokoro-run synth --provider cpu --fallback "$fallback" \
               --text 'Hello, outofdictionary world!' --output "$RUNNER_TEMP/$fallback.wav"
           done
+      - name: Server smoke test (CPU)
+        run: |
+          bin/kokoro-run serve --listen 127.0.0.1:8880 --threads 2 > "$RUNNER_TEMP/serve.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf localhost:8880/readyz && break; sleep 1; done
+          speech() {
+            curl -sf localhost:8880/v1/audio/speech -H 'Content-Type: application/json' -o "$RUNNER_TEMP/speech.$1" \
+              -d '{"model":"tts-1","voice":"alloy","response_format":"'"$1"'","input":"Meet at 3:05 p.m. on May 5, 2026. See https://example.com!"}'
+          }
+          speech wav && test "$(head -c 4 "$RUNNER_TEMP/speech.wav")" = RIFF
+          speech mp3 && file "$RUNNER_TEMP/speech.mp3" | grep -q 'layer III'
+          curl -sf localhost:8880/metrics | grep -q 'kokoro_requests_total{format="mp3",model="kokoro-v1.0",status="200"} 1'
+          kill %1
+          cat "$RUNNER_TEMP/serve.log"
+
+  docker:
+    name: Docker (CPU, slim)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build
+        run: docker buildx build --platform linux/amd64 -f docker/Dockerfile.cpu --build-arg BAKE_MODELS=0 --load -t kokoro-run:ci .
+      - name: Run
+        run: |
+          docker run --rm kokoro-run:ci --version
+          docker run --rm kokoro-run:ci config
+          docker run --rm --entrypoint sh kokoro-run:ci -c 'test -f /opt/onnxruntime/lib/libonnxruntime.so.1.22.0 && test -f /usr/share/doc/kokoro-run/THIRD_PARTY.md'
 
   lint:
     runs-on: ubuntu-24.04

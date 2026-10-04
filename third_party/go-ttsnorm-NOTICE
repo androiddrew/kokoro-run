@@ -1,0 +1,8 @@
+go-ttsnorm
+Copyright 2026 Drew Bednar
+
+Originally developed in github.com/androiddrew/gokittentts.
+
+The normalize and sentence packages are Go ports of KittenTTS's
+kittentts/preprocess.py (normalize_text, TextPreprocessor, chunk_text),
+Copyright KittenML, licensed under the Apache License, Version 2.0.

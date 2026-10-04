@@ -1,0 +1,11 @@
+.git
+.github
+bin
+dist
+artifacts
+assets
+*.wav
+.assets
+*.onnx
+*.bin
+__pycache__
