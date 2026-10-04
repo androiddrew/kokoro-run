@@ -57,6 +57,7 @@ as its GitHub release notes.
 - `--ort` and the `--model`/`--voices` paths no longer show environment-dependent
   defaults in `--help`; the environment variables still apply, through the new
   configuration layers.
+- `synth-all-voices.sh` moved to `scripts/synth-all-voices.sh`.
 - New dependencies are listed in THIRD_PARTY.md. The MP3 encoder, shine-mp3, is
   LGPL-2.0; see THIRD_PARTY.md for how kokoro-run meets its terms.
 

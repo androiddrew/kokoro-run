@@ -193,7 +193,7 @@ bin/kokoro-run bench --text 'Hello, world!' --output artifacts/local-bench
 bin/kokoro-run serve --listen 127.0.0.1:8880
 bin/kokoro-run pull
 bin/kokoro-run config --config my.yaml
-./synth-all-voices.sh
+scripts/synth-all-voices.sh
 ```
 
 `synth`, `phonemize` and `bench` accept `--text`, `--file`, or stdin. The English
