@@ -1,6 +1,6 @@
 // Package engine is the loaded text-to-speech pipeline shared by the CLI and
-// the server: the pronunciation frontend with its fallback, the Kokoro model
-// and the ONNX Runtime lease they share.
+// the server: the pronunciation frontend with its fallback and the Kokoro model,
+// which share one ONNX Runtime environment.
 package engine
 
 import (
@@ -97,10 +97,10 @@ type Initialization struct {
 type Pipeline struct {
 	Frontend  *Frontend // nil when loaded with Controlled
 	Synthesis *kokoro.Engine
-	lease     *ortenv.Lease
 }
 
-// Load acquires the runtime and loads the pipeline. warmVoice and warmSpeed
+// Load initializes the runtime and loads the pipeline. The runtime stays loaded
+// until process exit, so later pipelines reuse it. warmVoice and warmSpeed
 // prepare one input up front, so a bad voice fails here rather than on the
 // first request.
 func Load(o Options, warmVoice string, warmSpeed float32) (_ *Pipeline, init Initialization, err error) {
@@ -116,7 +116,7 @@ func Load(o Options, warmVoice string, warmSpeed float32) (_ *Pipeline, init Ini
 		return nil, init, err
 	}
 	start := time.Now()
-	p.lease, err = ortenv.Acquire(o.Frontend.ORTLibrary)
+	err = ortenv.Init(o.Frontend.ORTLibrary)
 	runtimeSeconds := time.Since(start).Seconds()
 	if err != nil {
 		return nil, init, err
@@ -167,7 +167,8 @@ func cudaDriverPresent(provider kokoro.Provider) error {
 	return fmt.Errorf("provider cuda: no NVIDIA GPU device is visible (%s); install the driver, or run the container with --gpus all (--runtime nvidia on Jetson)", strings.Join(nvidiaDrivers, ", "))
 }
 
-// Close releases the model, the frontend and then the runtime lease.
+// Close releases the model and then the frontend. The ONNX Runtime environment
+// stays loaded.
 func (p *Pipeline) Close() error {
 	var err error
 	if p.Synthesis != nil {
@@ -175,9 +176,6 @@ func (p *Pipeline) Close() error {
 	}
 	if p.Frontend != nil {
 		err = errors.Join(err, p.Frontend.Close())
-	}
-	if p.lease != nil {
-		err = errors.Join(err, p.lease.Close())
 	}
 	return err
 }

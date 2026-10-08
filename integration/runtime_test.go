@@ -72,8 +72,10 @@ func TestSharedFrontendRuntime(t *testing.T) {
 		if err = fallback.Close(); err != nil {
 			t.Fatal(err)
 		}
-		if ort.IsInitialized() {
-			t.Fatal("environment leaked")
+		// ortenv v0.1.0 unloaded the runtime here and reloaded it on the next
+		// iteration, which crashes CUDA providers (androiddrew/ortenv#2).
+		if !ort.IsInitialized() {
+			t.Fatal("closing every engine destroyed the environment")
 		}
 	}
 }

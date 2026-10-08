@@ -8,10 +8,10 @@ archive includes them together with LICENSE, NOTICE and this file.
 
 | Module | Version | Terms |
 |---|---|---|
-| github.com/androiddrew/go-g2p | v0.1.0 | Apache-2.0; `third_party/go-g2p-NOTICE` |
-| github.com/androiddrew/go-kokoro | v0.1.0 | Apache-2.0; `third_party/go-kokoro-NOTICE` |
+| github.com/androiddrew/go-g2p | v0.2.0 | Apache-2.0; `third_party/go-g2p-NOTICE` |
+| github.com/androiddrew/go-kokoro | v0.2.0 | Apache-2.0; `third_party/go-kokoro-NOTICE` |
 | github.com/androiddrew/go-ttsnorm | v0.1.0 | Apache-2.0; ports KittenTTS's text preprocessing (Apache-2.0); `third_party/go-ttsnorm-NOTICE` |
-| github.com/androiddrew/ortenv | v0.1.0 | MIT, Copyright (c) 2026 Drew Bednar; `ortenv.txt`, `third_party/ortenv-NOTICE` |
+| github.com/androiddrew/ortenv | v0.2.0 | MIT, Copyright (c) 2026 Drew Bednar; `ortenv.txt`, `third_party/ortenv-NOTICE` |
 | github.com/spf13/cobra | v1.10.2 | Apache-2.0; `cobra.txt` |
 | github.com/spf13/pflag | v1.0.10 | BSD-3-Clause; `pflag.txt` |
 | github.com/yalue/onnxruntime_go | v1.22.0 | MIT; `onnxruntime_go.txt` |
