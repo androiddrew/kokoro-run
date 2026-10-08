@@ -1,11 +1,11 @@
-github.com/androiddrew/go-g2p v0.1.0 h1:IGtUnJbBE84pNFBY/JX3gygvJjf/FNvnwsco+eKccXg=
-github.com/androiddrew/go-g2p v0.1.0/go.mod h1:I67HUh23mjffqVFuobD1HCkAyQKE5bn3Kpo+BQYPItg=
-github.com/androiddrew/go-kokoro v0.1.0 h1:N+066/1DspzkN10ddYKXWIS7d3650EVUsP58RW6CKyM=
-github.com/androiddrew/go-kokoro v0.1.0/go.mod h1:M0YkAZxiiy5N2jd2ZqkPCpXpYOc296ocRXCN1/lEeR4=
+github.com/androiddrew/go-g2p v0.2.0 h1:0EEXSxcDq7KGTtVcm4ExXY5LmRBrekn2INFNF2tH09o=
+github.com/androiddrew/go-g2p v0.2.0/go.mod h1:9FqWwoz+JD9P2JMbb3Wq/4OFHsR/nfThJi+CYSZf4As=
+github.com/androiddrew/go-kokoro v0.2.0 h1:G6tWQn8igIZVDVQbGMyAa78JE8WjbHKSyjeKUd3B/YU=
+github.com/androiddrew/go-kokoro v0.2.0/go.mod h1:EsPl2UNgD4SvZak+jPFl4vf12ey84prQDOUEo/CKG+M=
 github.com/androiddrew/go-ttsnorm v0.1.0 h1:AvHgQSBASTYvAfx7/W9dUwQX3unPNqnJKUIUshuWFmw=
 github.com/androiddrew/go-ttsnorm v0.1.0/go.mod h1:kydShs9zfWe52MR1/zkDWp4Obviu4cemH48VaJasPIo=
-github.com/androiddrew/ortenv v0.1.0 h1:5D3OygFYIQKpMQHB2a4ew/4UVWX3MDdKpOpR+qaDDcE=
-github.com/androiddrew/ortenv v0.1.0/go.mod h1:v0we3sbtZaSgJSzI/4OhEUGfQyuZM9aYAxcUOCl+8W0=
+github.com/androiddrew/ortenv v0.2.0 h1:qYhIAAOy2HJyc4FHGmdbq3dk41RpiBQxlncMcDKAehA=
+github.com/androiddrew/ortenv v0.2.0/go.mod h1:v0we3sbtZaSgJSzI/4OhEUGfQyuZM9aYAxcUOCl+8W0=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/braheezy/shine-mp3 v0.2.0 h1:0OwmbVLfQFe4c5+UjV5FF4NKedxYw0qHnP5rDOs/wjU=

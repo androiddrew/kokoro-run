@@ -7,6 +7,20 @@ as its GitHub release notes.
 
 ## [Unreleased]
 
+### Changed
+
+- go-kokoro, go-g2p and ortenv are upgraded to v0.2.0. ONNX Runtime now stays
+  loaded from the first pipeline load until the process exits, rather than
+  being unloaded when the last model closes.
+
+### Fixed
+
+- `serve` without preload could unload and reload ONNX Runtime in one process
+  when the first replicas failed to load after the runtime had started.
+  Reloading the runtime can crash the CUDA provider
+  ([ortenv#2](https://github.com/androiddrew/ortenv/issues/2)); the runtime is
+  now loaded once and kept.
+
 ## [0.2.0] - 2026-10-04
 
 ### Added
