@@ -14,11 +14,11 @@ import (
 
 	g2p "github.com/androiddrew/go-g2p"
 	kokoro "github.com/androiddrew/go-kokoro"
+	kokorotext "github.com/androiddrew/go-kokoro/text"
 	"github.com/spf13/cobra"
 
 	settings "github.com/androiddrew/kokoro-run/internal/config"
 	"github.com/androiddrew/kokoro-run/internal/engine"
-	"github.com/androiddrew/kokoro-run/internal/textprep"
 )
 
 // config is one run's resolved settings in the form the engines take.
@@ -37,7 +37,7 @@ type config struct {
 
 // prepare applies the configured markdown and normalization steps.
 func (c config) prepare(text string) string {
-	return textprep.Text(text, textprep.Options{Markdown: c.Markdown, Normalize: c.Normalize})
+	return kokorotext.Prepare(text, kokorotext.PrepOptions{Markdown: c.Markdown, Normalize: c.Normalize})
 }
 
 // fromSettings converts layered settings to a run's config.

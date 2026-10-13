@@ -22,11 +22,11 @@ import (
 	"unicode/utf8"
 
 	g2p "github.com/androiddrew/go-g2p"
+	"github.com/androiddrew/go-kokoro/text"
 
 	"github.com/androiddrew/kokoro-run/internal/audio"
 	settings "github.com/androiddrew/kokoro-run/internal/config"
 	"github.com/androiddrew/kokoro-run/internal/engine"
-	"github.com/androiddrew/kokoro-run/internal/textprep"
 )
 
 // OpenAI accepts speeds in this range; anything else is a 400. Accepted
@@ -282,7 +282,7 @@ func (s *server) speech(w http.ResponseWriter, r *http.Request) {
 		Text:   *req.Input,
 		Voice:  voice,
 		Speed:  max(s.cfg.Server.Speed.Min, min(s.cfg.Server.Speed.Max, float32(speed))),
-		Prep:   textprep.Options{Normalize: orDefault(req.Normalize, s.cfg.Normalize), Markdown: orDefault(req.Markdown, s.cfg.Markdown)},
+		Prep:   text.PrepOptions{Normalize: orDefault(req.Normalize, s.cfg.Normalize), Markdown: orDefault(req.Markdown, s.cfg.Markdown)},
 		Trim:   s.cfg.Trim,
 		Gap:    s.cfg.Server.ChunkGap,
 		Strict: s.cfg.Server.StrictPronunciation,
