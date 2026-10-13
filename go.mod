@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/androiddrew/go-g2p v0.2.0
-	github.com/androiddrew/go-kokoro v0.2.0
+	github.com/androiddrew/go-kokoro v0.3.0
 	github.com/androiddrew/go-ttsnorm v0.1.0
 	github.com/androiddrew/ortenv v0.2.0
 	github.com/braheezy/shine-mp3 v0.2.0
@@ -30,5 +30,3 @@ require (
 	golang.org/x/text v0.41.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
-
-replace github.com/androiddrew/go-kokoro => ../go-kokoro
