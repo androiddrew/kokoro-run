@@ -7,6 +7,18 @@ as its GitHub release notes.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-13
+
+### Changed
+
+- The text pipeline (text preparation, sentence splitting, pronunciation and
+  streaming synthesis) now comes from
+  [go-kokoro/text](https://github.com/androiddrew/go-kokoro/tree/v0.3.0/text),
+  which other Go programs can import. It moved there from kokoro-run's
+  `internal/engine` and `internal/textprep`. go-kokoro is upgraded to v0.3.0.
+  Speech, normalization and the server's responses are unchanged; server output
+  is byte-identical to 0.2.1.
+
 ## [0.2.1] - 2026-10-08
 
 ### Changed
@@ -93,7 +105,8 @@ as its GitHub release notes.
   fallback.
 - Release archives for linux/amd64 and linux/arm64 with SHA256SUMS.
 
-[Unreleased]: https://github.com/androiddrew/kokoro-run/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/androiddrew/kokoro-run/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/androiddrew/kokoro-run/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/androiddrew/kokoro-run/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/androiddrew/kokoro-run/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/androiddrew/kokoro-run/releases/tag/v0.1.0
