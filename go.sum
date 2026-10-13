@@ -1,7 +1,7 @@
 github.com/androiddrew/go-g2p v0.2.0 h1:0EEXSxcDq7KGTtVcm4ExXY5LmRBrekn2INFNF2tH09o=
 github.com/androiddrew/go-g2p v0.2.0/go.mod h1:9FqWwoz+JD9P2JMbb3Wq/4OFHsR/nfThJi+CYSZf4As=
-github.com/androiddrew/go-kokoro v0.2.0 h1:G6tWQn8igIZVDVQbGMyAa78JE8WjbHKSyjeKUd3B/YU=
-github.com/androiddrew/go-kokoro v0.2.0/go.mod h1:EsPl2UNgD4SvZak+jPFl4vf12ey84prQDOUEo/CKG+M=
+github.com/androiddrew/go-kokoro v0.3.0 h1:snSJOCDK+xGS9CeXMW6g5M+CDSzjswTBLWqyHcuUhm8=
+github.com/androiddrew/go-kokoro v0.3.0/go.mod h1:Rtb1Mcu5KGuJDy1dm2G2b8wLpla8qz760PxBC7YK6Zk=
 github.com/androiddrew/go-ttsnorm v0.1.0 h1:AvHgQSBASTYvAfx7/W9dUwQX3unPNqnJKUIUshuWFmw=
 github.com/androiddrew/go-ttsnorm v0.1.0/go.mod h1:kydShs9zfWe52MR1/zkDWp4Obviu4cemH48VaJasPIo=
 github.com/androiddrew/ortenv v0.2.0 h1:qYhIAAOy2HJyc4FHGmdbq3dk41RpiBQxlncMcDKAehA=

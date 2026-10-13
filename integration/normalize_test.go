@@ -8,10 +8,9 @@ import (
 
 	g2p "github.com/androiddrew/go-g2p"
 	"github.com/androiddrew/go-g2p/fallback/neural"
+	"github.com/androiddrew/go-kokoro/text"
 	"github.com/androiddrew/go-ttsnorm/corpus"
 	"go.yaml.in/yaml/v3"
-
-	"github.com/androiddrew/kokoro-run/internal/textprep"
 )
 
 // TestNormalizeCorpus reads go-ttsnorm's 476-input corpus the way the server
@@ -51,7 +50,7 @@ func TestNormalizeCorpus(t *testing.T) {
 	digit := regexp.MustCompile(`\p{Nd}`)
 	var matched, baseline, baselineComplete int
 	for _, c := range cases {
-		prepared := textprep.Text(c.Input, textprep.Options{Markdown: true, Normalize: true})
+		prepared := text.Prepare(c.Input, text.PrepOptions{Markdown: true, Normalize: true})
 		got, complete := phonemize(prepared)
 		want, _ := phonemize(c.Expected)
 		raw, rawComplete := phonemize(c.Input)

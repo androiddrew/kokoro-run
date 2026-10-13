@@ -12,9 +12,9 @@ import (
 
 	g2p "github.com/androiddrew/go-g2p"
 	kokoro "github.com/androiddrew/go-kokoro"
+	"github.com/androiddrew/go-kokoro/text"
 
 	"github.com/androiddrew/kokoro-run/internal/engine"
-	"github.com/androiddrew/kokoro-run/internal/textprep"
 )
 
 func loadPipeline(t *testing.T) *engine.Pipeline {
@@ -46,7 +46,7 @@ func TestStream(t *testing.T) {
 	req := engine.Request{
 		Text:  "**Hello** there. The meeting is at 3:05 p.m. on May 5, 2026! How are you today?",
 		Voice: "af_heart", Speed: 1, Trim: true, Gap: gap,
-		Prep: textprep.Options{Markdown: true, Normalize: true},
+		Prep: text.PrepOptions{Markdown: true, Normalize: true},
 	}
 	var chunks []engine.Chunk
 	for c, err := range p.Stream(ctx, req) {
